@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Add an animated icon to the map</title>
+<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
+<style>
+body { margin: 0; padding: 0; background-color: rgba(31, 31, 31, 1); }
+#map { position: absolute; top: 0; bottom: 0; width: 100%; }
+.custom-marker-points{
+    font-size: 12px; 
+    color: white;
+    margin-top: 20px;
+}
+
+#legend { position: absolute; bottom: 30px; right: 40px;  padding: 10px; border: 0px; font-family: Arial, sans-serif; }
+#legend-image{
+width: 155px;
+height: 100px;
+}
+
+
+     /* HIDING MAPBOX FOOTERS */
+        .mapboxgl-ctrl-bottom-left{
+            display: none;
+        }
+        .mapboxgl-ctrl-bottom-right{
+            display: none;
+        }
+        
+.mapboxgl-popup-content {
+    background-color: rgba(142, 142, 142, 0.50); /* White color with 65% opacity */
+    color: white; /* Text color */
+    padding: 10px;
+
+
+
+
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id='legend'>
+        <img src='route_legend.png' alt='Legend' id="legend-image">
+</div>
+<script>
+	// TO MAKE THE MAP APPEAR YOU MUST
+	// ADD YOUR ACCESS TOKEN FROM
+	// https://account.mapbox.com
+	mapboxgl.accessToken = 'pk.eyJ1IjoiamFydmlzMTciLCJhIjoiY2xzZzNueDgzMW5hdjJrbzVqdmcxNGNqYSJ9.gRUCqN9-SesVl6kht62FiA';
+    const map = new mapboxgl.Map({
+        container: 'map',
+        center: [0, 3],
+        zoom: 1.75,
+        scrollZoom: false, // Disable scroll zoom
+        dragPan: false, // Disable drag pan
+        // Choose from Mapbox's core styles, or make your own style with Mapbox Studio
+        style: 'mapbox://styles/mapbox/streets-v12',
+        projection: 'naturalEarth'
+    });
+
+    // DARK MODE HERE
+    map.setStyle('mapbox://styles/mapbox/dark-v11');
+
+
+        
+        // Fetch routes from ArcGIS REST Service URL
+        map.on('style.load', () => {
+
+            // Removing country labels
+            map.removeLayer('country-label');
+
+          // Change font color of continent labels
+          map.setPaintProperty('continent-label', 'text-color' ,'#FFFFFF');
+
+
+        fetch('https://services6.arcgis.com/22wyIskRdsHsTOJF/arcgis/rest/services/World_Shipping_Lanes/FeatureServer/407/query?where=1%3D1&outFields=*&f=geojson')
+        .then(response => response.json())
+        .then(data => {
+
+        data.features.forEach(feature => {
+            if (feature.geometry.type === 'LineString' || feature.geometry.type === 'MultiLineString') {
+                feature.properties = {'lineMetrics': true};
+            }
+        });
+            const styles = [
+                { color: '#ff0000', width: 6 }, // Style for feature 1
+                { color: '#00ff00', width: 2 }, // Style for feature 2
+                { color: '#0000ff', width: 0 }  // Style for feature 3
+            ];
+            data.features.forEach((feature, index) => {
+                feature.properties = {
+
+                    'line-color': styles[index].color,
+                    'line-width': styles[index].width,
+                };
+            });
+            
+            map.addLayer({
+    id: 'routes-layer-${index}',
+    type: 'line',
+    source: {
+        type: 'geojson',
+        data: data,
+        lineMetrics: true,
+    },
+    layout: {
+        'line-join': 'round',
+        'line-cap': 'round'
+    },
+    paint: {
+        'line-color': ['get', 'line-color'],
+        'line-width': ['get', 'line-width'],
+
+
+'line-gradient': [
+    'interpolate',
+    ['linear'],
+    ['line-progress'],
+    0,
+    // CHANGE COLOR HERE (currently orange, 4th parameter is Opacity)
+    'rgba(255, 165, 0, 0)', // Start of the line (no glow)
+    0.05,
+    'rgba(255, 165, 0, 0.05)', // Gradual increase in glow intensity
+    0.5,
+    'rgba(255, 165, 0, 0.9)', // Peak intensity of the glow
+    0.95,
+    'rgba(255, 165, 0, 0.05)', // Gradual decrease in glow intensity
+    1,
+    'rgba(255, 165, 0, 0)' // End of the line (no glow)
+]
+    }
+});
+        })
+        .catch(error => {
+            console.error('Error fetching route data:', error);
+        });
+
+        });
+
+    // Create a custom marker with HTML content
+const customMarkerPanama = new mapboxgl.Marker({ element: createCustomTextElementPanama() })
+    .setLngLat([-79.680000, 9.080000]) // Coordinates where you want to place the marker 9.066451, -79.678395
+    .addTo(map);
+
+// Function to create the custom HTML element for the text
+function createCustomTextElementPanama() {
+    const div = document.createElement('div');
+    div.className = 'custom-marker-points';
+    div.innerHTML = 'Panama Canal';
+
+    return div;
+}
+
+const customMarkerSuez = new mapboxgl.Marker({ element: createCustomTextElementSuez() })
+    .setLngLat([32.49194444, 30.57277778]) // Coordinates where you want to place the marker 9.066451, -79.678395
+    .addTo(map);
+
+// Function to create the custom HTML element for the text
+function createCustomTextElementSuez() {
+    const div = document.createElement('div');
+    div.className = 'custom-marker-points';
+    div.innerHTML = 'Suez Canal';
+    return div;
+}
+
+const customMarkerMandab = new mapboxgl.Marker({ element: createCustomTextElement() })
+    .setLngLat([43.5607, 12.4970]) // Coordinates where you want to place the marker 9.066451, -79.678395
+    .addTo(map);
+
+// Function to create the custom HTML element for the text
+function createCustomTextElement() {
+    const div = document.createElement('div');
+    div.className = 'custom-marker-points';
+    div.innerHTML = 'Bab-al-Mandab Strait';
+    return div;
+}
+
+    const size = 100;
+
+    // This implements `StyleImageInterface`
+    // to draw a pulsing dot icon on the map.
+    const pulsingDot = {
+        width: size,
+        height: size,
+        data: new Uint8Array(size * size * 4),
+
+        // When the layer is added to the map,
+        // get the rendering context for the map canvas.
+        onAdd: function () {
+            const canvas = document.createElement('canvas');
+            canvas.width = this.width;
+            canvas.height = this.height;
+            this.context = canvas.getContext('2d');
+        },
+
+        // Call once before every frame where the icon will be used.
+        render: function () {
+            const duration = 1000;
+            const t = (performance.now() % duration) / duration;
+
+            const radius = (size / 2) * 0.3;
+            const outerRadius = (size / 2) * 0.7 * t + radius;
+            const context = this.context;
+
+            // Draw the outer circle.
+            context.clearRect(0, 0, this.width, this.height);
+            context.beginPath();
+            context.arc(
+                this.width / 2,
+                this.height / 2,
+                outerRadius,
+                0,
+                Math.PI * 2
+            );
+            context.fillStyle = `rgba(255, 165, 0, ${1 - t})`;
+            context.fill();
+
+            // Draw the inner circle.
+            context.beginPath();
+            context.arc(
+                this.width / 2,
+                this.height / 2,
+                radius,
+                0,
+                Math.PI * 2
+            );
+            context.fillStyle = 'rgba(255, 165, 0, 0.9)';
+            context.strokeStyle = 'white';
+            context.lineWidth = 2 + 4 * (1 - t);
+            context.fill();
+            context.stroke();
+
+            // Update this image's data with data from the canvas.
+            this.data = context.getImageData(
+                0,
+                0,
+                this.width,
+                this.height
+            ).data;
+
+            // Continuously repaint the map, resulting
+            // in the smooth animation of the dot.
+            map.triggerRepaint();
+
+            // Return `true` to let the map know that the image was updated.
+            return true;
+        }
+    };
+
+    map.on('load', () => {
+    // Load your custom icon
+
+    map.addImage('pulsing-dot', pulsingDot, { pixelRatio: 2 });
+        
+        // Add your custom icon layer
+        map.addSource('dot-point', {
+            'type': 'geojson',
+            'data': {
+                'type': 'FeatureCollection',
+                'features': [
+                    // suez Canal
+                    {
+                        'type': 'Feature',
+                        'geometry': {
+                            'type': 'Point',
+                            'coordinates': [32.49194444, 30.57277778] // icon position [lng, lat]
+                        },
+                        'properties': {
+                            'description': 'Handled approx 12-15% of global trade in 2023' // Custom text to show on hover
+                        }
+                    },
+
+                    // Bab-al-Mandab Starit
+                    {
+                        'type': 'Feature',
+                        'geometry': {
+                            'type': 'Point',
+                            'coordinates': [43.5607, 12.4970] // icon position [lng, lat]
+                        },
+                        'properties': {
+                            'description': 'Handled approx 12-15% of global trade in 2023' // Custom text to show on hover
+                        }
+                    },
+                     // Panama Canal
+                     {
+                        'type': 'Feature',
+                        'geometry': {
+                            'type': 'Point',
+                            'coordinates': [-79.680000, 9.080000] // icon position [lng, lat]
+                        },
+                        'properties': {
+                            'description': 'Handled approx 7.5-9.5% of global trade in 2023' // Custom text to show on hover
+                        }
+                    },
+
+
+                ]
+            }
+        });
+        
+        map.addLayer({
+            'id': 'layer-with-pulsing-dot',
+            'type': 'symbol',
+            'source': 'dot-point',
+            'layout': {
+                'icon-image': 'pulsing-dot', // Use your custom icon here
+                // 'icon-size': 0.3 // Adjust the icon size if needed
+            }
+        });
+
+         // Show custom text on hover
+         map.on('mouseenter', 'layer-with-pulsing-dot', (e) => {
+        map.getCanvas().style.cursor = 'pointer'; // Change cursor to pointer
+        const coordinates = e.features[0].geometry.coordinates.slice();
+        const description = e.features[0].properties.description;
+
+        // Ensure that if the map is zoomed out such that multiple
+        // copies of the feature are visible, the popup appears
+        // over the copy being pointed to.
+        while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+            coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+        }
+
+        // Show the custom text
+       // Create a single popup
+        let popup =  new mapboxgl.Popup({ closeButton: false, closeOnClick: true })
+            .setLngLat(coordinates)
+            .setHTML(description)
+            .addTo(map);
+
+
+    });
+
+    // Hide custom text when mouse leaves the feature
+    map.on('mouseleave', 'layer-with-pulsing-dot', () => {
+        map.getCanvas().style.cursor = '';
+        map.getCanvas().title = '';
+        popup.remove(); // Remove the popup
+    });
+});
+
+</script>
+
+</body>
+</html>
